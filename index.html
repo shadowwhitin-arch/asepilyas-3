@@ -1,397 +1,480 @@
-<!DOCTYPE html>
-<html lang="id" class="scroll-smooth">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Undangan Pernikahan: Asep & Ai Siti</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" rel="stylesheet">
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Alex+Brush&family=Montserrat:wght@300;400;600&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap');
+{
+  "name": "cinematic-wedding-invite",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 3000",
+    "build": "next build",
+    "start": "next start"
+  },
+  "dependencies": {
+    "next": "14.0.0",
+    "react": "18.2.0",
+    "react-dom": "18.2.0",
+    "three": "^0.156.0",
+    "@react-three/fiber": "^8.13.0",
+    "@react-three/drei": "^9.50.0",
+    "gsap": "^3.12.0",
+    "zustand": "^4.4.0",
+    "framer-motion": "^10.12.0",
+    "tailwindcss": "^4.3.0",
+    "postcss": "^8.4.0",
+    "autoprefixer": "^10.4.0",
+    "howler": "^2.2.3",
+    "uuid": "^9.0.0"
+  }
+}
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  reactStrictMode: true,
+  experimental: {
+    appDir: true
+  },
+  images: {
+    unoptimized: true
+  }
+};
+module.exports = nextConfig;
+module.exports = {
+  content: ["./app/**/*.{js,ts,jsx,tsx}", "./components/**/*.{js,ts,jsx,tsx}", "./scenes/**/*.{js,ts,jsx,tsx}"],
+  theme: {
+    extend: {
+      colors: {
+        gold: "#C9A34A",
+        ivory: "#F8F4EE",
+        cinematicBlack: "#050405"
+      },
+      fontFamily: {
+        serifTitle: ["Playfair Display", "serif"],
+        ui: ["Inter", "sans-serif"]
+      }
+    }
+  },
+  plugins: []
+};
+module.exports = {
+  plugins: {
+    tailwindcss: {},
+    autoprefixer: {}
+  }
+};
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-        :root {
-            --dusty-rose: #D4A5A5;
-            --dark-rose: #9E7676;
-            --soft-pink: #F3E8E8;
-            --navy-blue: #1E293B;
-        }
+html,body,#__next {
+  height: 100%;
+  background: radial-gradient(ellipse at center, #0b0b0b 0%, #000000 100%);
+  color: #fff;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+}
 
-        body {
-            font-family: 'Montserrat', sans-serif;
-            overflow-x: hidden;
-            background-color: #f8fafc;
-        }
+/* film grain overlay */
+body::after {
+  content: "";
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  background-image: url('/assets/film-grain.png');
+  opacity: 0.06;
+  mix-blend-mode: overlay;
+}
 
-        .font-serif { font-family: 'Playfair Display', serif; }
-        .font-signature { font-family: 'Alex Brush', cursive; }
+/* vignette */
+body::before {
+  content: "";
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(ellipse at center, rgba(0,0,0,0) 40%, rgba(0,0,0,0.6) 100%);
+}
 
-        .text-dusty-rose { color: var(--dusty-rose); }
-        .bg-dusty-rose { background-color: var(--dusty-rose); }
-        .border-dusty-rose { border-color: var(--dusty-rose); }
+/* small utility */
+.text-ivory { color: #F8F4EE; }
+{
+  "groom": "Asep",
+  "bride": "Ilyas",
+  "date": "2026-12-20T16:00:00",
+  "venue": "Bandung",
+  "music": "/assets/music.mp3",
+  "media": {
+    "openingVideo": "/assets/opening.mp4",
+    "backgroundImage": "/assets/bg.jpg"
+  },
+  "story": {
+    "meeting": "Kami dipertemukan tanpa rencana, di bawah lampu kota yang basah oleh hujan.",
+    "journey": "Kami tumbuh melewati waktu, menapaki hari dengan tawa dan pelukan.",
+    "proposal": "Di hadapan matahari senja, kami memilih selamanya."
+  }
+}
+import create from "zustand";
+import weddingData from "../data/wedding.json";
 
-        /* Global Section Background */
-        .section-bg {
-            background-image: url('bacground_polos_tanpa_nama_2K_202605061135.jpg');
-            background-size: cover;
-            background-position: center;
-            background-attachment: fixed;
-            position: relative;
-        }
+type RSVP = { name: string; attendance: string; message?: string; id: string };
 
-        .section-overlay {
-            position: absolute;
-            inset: 0;
-            background: rgba(255, 255, 255, 0.4);
-            pointer-events: none;
-        }
+type State = {
+  data: typeof weddingData;
+  musicOn: boolean;
+  setMusicOn: (v: boolean) => void;
+  rsvps: RSVP[];
+  addRSVP: (r: RSVP) => void;
+};
 
-        /* Card Styling */
-        .glass-card {
-            background: rgba(255, 255, 255, 0.7);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.5);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
-            transition: transform 0.3s ease;
-        }
+export const useStore = create<State>((set) => ({
+  data: weddingData,
+  musicOn: true,
+  setMusicOn: (v) => set({ musicOn: v }),
+  rsvps: [],
+  addRSVP: (r) => set((s) => ({ rsvps: [...s.rsvps, r] }))
+}));
 
-        .glass-card:hover {
-            transform: translateY(-5px);
-        }
+export default useStore;
+import "./globals.css";
+import { ReactNode } from "react";
 
-        /* Falling Petals */
-        .petal {
-            position: fixed;
-            background-color: #ffc0cb;
-            border-radius: 150% 0 150% 0;
-            z-index: 9999;
-            pointer-events: none;
-            opacity: 0.5;
-        }
+export const metadata = {
+  title: "Undangan Pernikahan",
+  description: "Interactive cinematic wedding invitation"
+};
 
-        @keyframes fall {
-            0% { transform: translateY(-10vh) rotate(0deg) translateX(0); opacity: 1; }
-            100% { transform: translateY(110vh) rotate(360deg) translateX(20px); opacity: 0; }
-        }
+export default function RootLayout({ children }: { children: ReactNode }) {
+  return (
+    <html lang="id">
+      <body>
+        {children}
+      </body>
+    </html>
+  );
+}
+"use client";
+import dynamic from "next/dynamic";
+import { Suspense, useEffect, useRef } from "react";
+import LoadingScreen from "../components/LoadingScreen";
+import MusicControl from "../components/MusicControl";
+import HUD from "../components/HUD";
+import { Canvas } from "@react-three/fiber";
+import { useStore } from "../store/useStore";
+import { motion } from "framer-motion";
+import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 
-        #main-content { display: none; }
-        .cover-active { overflow: hidden; }
+gsap.registerPlugin(ScrollTrigger);
 
-        .nav-link { transition: all 0.3s ease; color: #64748b; }
-        .nav-link.active { color: var(--dusty-rose); font-weight: bold; }
+const OpeningPortal = dynamic(() => import("../scenes/OpeningPortal"), { ssr: false });
+const CityScene = dynamic(() => import("../scenes/CityScene"), { ssr: false });
+const JourneyScene = dynamic(() => import("../scenes/JourneyScene"), { ssr: false });
+const ProposalScene = dynamic(() => import("../scenes/ProposalScene"), { ssr: false });
+const RevealScene = dynamic(() => import("../scenes/RevealScene"), { ssr: false });
+const MapScene = dynamic(() => import("../scenes/MapScene"), { ssr: false });
 
-        .animate-on-scroll { opacity: 0; transform: translateY(30px); transition: all 0.8s ease-out; }
-        .animate-on-scroll.visible { opacity: 1; transform: translateY(0); }
+export default function Page() {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const data = useStore((s) => s.data);
 
-        .pulse-audio { animation: pulse 2s infinite; }
-        @keyframes pulse {
-            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(212, 165, 165, 0.7); }
-            70% { transform: scale(1.1); box-shadow: 0 0 0 10px rgba(212, 165, 165, 0); }
-            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(212, 165, 165, 0); }
-        }
-    </style>
-</head>
-<body class="cover-active">
+  useEffect(() => {
+    const ctx = gsap.context(() => {
+      ScrollTrigger.defaults({ scrub: 0.6 });
+      ScrollTrigger.create({
+        trigger: "#scroll",
+        start: "top top",
+        end: "bottom bottom"
+      });
+    }, containerRef);
+    return () => ctx.revert();
+  }, []);
 
-    <!-- Cover Section -->
-    <section id="cover" class="fixed inset-0 z-[100] flex items-center justify-center overflow-hidden">
-        <div class="absolute inset-0 section-bg"></div>
-        <div class="absolute inset-0 bg-white/30"></div>
-        
-        <div class="relative z-10 text-center px-6 animate__animated animate__fadeIn">
-            <div class="mb-6 inline-block p-4 border border-dusty-rose/40 rounded-full backdrop-blur-md">
-                <i data-lucide="heart" class="w-8 h-8 text-dusty-rose fill-dusty-rose/20"></i>
-            </div>
-            <p class="uppercase tracking-[0.4em] mb-4 text-[10px] font-bold text-slate-600">The Wedding of</p>
-            <h1 class="font-serif text-5xl md:text-7xl mb-8 text-slate-800">Asep & Ai Siti</h1>
-            <div class="mb-12">
-                <p class="mb-3 font-light italic text-slate-500 text-sm">Spesial untuk Bapak/Ibu/Saudara/i:</p>
-                <h3 class="text-2xl font-semibold tracking-wide text-slate-700">Tamu Undangan</h3>
-            </div>
-            <button onclick="openInvitation()" class="group px-12 py-4 bg-dusty-rose text-white rounded-full font-bold shadow-2xl hover:scale-105 transition-all duration-300 flex items-center gap-3 mx-auto">
-                <i data-lucide="mail-open" class="w-5 h-5"></i> Buka Undangan
-            </button>
+  return (
+    <div ref={containerRef} id="scroll" className="w-full min-h-screen">
+      <Suspense fallback={<LoadingScreen />}>
+        <div className="fixed inset-0 z-0">
+          <Canvas
+            shadows
+            camera={{ position: [0, 1.6, 6], fov: 50 }}
+            gl={{ antialias: true, powerPreference: "high-performance" }}
+          >
+            <Suspense fallback={null}>
+              <OpeningPortal />
+              <CityScene />
+              <JourneyScene />
+              <ProposalScene />
+              <RevealScene />
+              <MapScene />
+            </Suspense>
+          </Canvas>
         </div>
-    </section>
 
-    <!-- Audio Control -->
-    <audio id="bgMusic" loop preload="auto">
-        <source src="https://www.bensound.com/bensound-music/bensound-love.mp3" type="audio/mpeg">
-    </audio>
+        <div className="relative z-10 min-h-screen">
+          <div className="h-screen flex items-center justify-center">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }}>
+              <div className="text-center px-6">
+                <h1 className="text-3xl md:text-5xl font-serifTitle text-ivory">Setiap kisah punya awal…</h1>
+                <p className="mt-4 text-gold">Scroll untuk memasuki dunia kami</p>
+              </div>
+            </motion.div>
+          </div>
 
-    <div id="audioControl" class="fixed top-6 right-6 z-[90] hidden">
-        <button onclick="toggleAudio()" class="w-12 h-12 bg-white/90 backdrop-blur rounded-full flex items-center justify-center shadow-xl text-dusty-rose pulse-audio border border-dusty-rose/20">
-            <i data-lucide="music" id="musicIcon"></i>
-        </button>
+          <section className="h-screen" id="scene-city" />
+          <section className="h-screen" id="scene-journey" />
+          <section className="h-screen" id="scene-proposal" />
+          <section className="h-screen" id="scene-reveal" />
+          <section className="h-screen" id="scene-map" />
+
+          <MusicControl />
+          <HUD />
+        </div>
+      </Suspense>
     </div>
+  );
+}
+"use client";
+import { motion } from "framer-motion";
 
-    <!-- Main Content -->
-    <div id="main-content">
-        
-        <!-- Hero Section -->
-        <section id="home" class="relative min-h-screen flex items-center justify-center text-center px-6 py-20 section-bg">
-            <div class="section-overlay"></div>
-            <div class="relative z-10 glass-card p-12 rounded-[40px] max-w-2xl mx-auto border border-white">
-                <p class="text-dusty-rose font-bold tracking-[0.4em] mb-6 uppercase text-xs">Mengarungi Samudra Kehidupan</p>
-                <h2 class="font-serif text-5xl md:text-8xl text-slate-800 mb-6">Asep & Ai</h2>
-                <div class="w-20 h-[2px] bg-dusty-rose mx-auto mb-6"></div>
-                <p class="text-2xl font-light text-slate-600 tracking-widest">07 . 06 . 2026</p>
-            </div>
-        </section>
-
-        <!-- Couple Section -->
-        <section id="couple" class="py-32 section-bg px-6">
-            <div class="section-overlay" style="background: rgba(255,255,255,0.5)"></div>
-            <div class="max-w-4xl mx-auto text-center relative z-10">
-                <div class="mb-24 animate-on-scroll">
-                    <h3 class="font-signature text-7xl text-dusty-rose mb-6">Mempelai</h3>
-                    <p class="text-slate-500 italic text-sm leading-relaxed max-w-md mx-auto">
-                        "Dan di antara tanda-tanda kekuasaan-Nya ialah Dia menciptakan untukmu isteri-isteri dari jenismu sendiri, supaya kamu cenderung dan merasa tenteram kepadanya."
-                    </p>
-                </div>
-
-                <div class="grid md:grid-cols-2 gap-20">
-                    <div class="animate-on-scroll">
-                        <div class="relative w-64 h-64 mx-auto mb-8">
-                            <div class="absolute inset-0 border-2 border-dusty-rose rounded-full rotate-12"></div>
-                            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Asep" alt="Asep" class="relative z-10 w-full h-full rounded-full bg-blue-50 border-4 border-white shadow-xl">
-                        </div>
-                        <h4 class="font-serif text-4xl mb-2 text-slate-800">Asep Ilyas</h4>
-                        <p class="text-dusty-rose font-semibold mb-2">Putra Pertama</p>
-                        <p class="text-slate-500 text-sm">Putra dari Bpk. Fulan & Ibu Fulanah</p>
-                    </div>
-
-                    <div class="animate-on-scroll">
-                        <div class="relative w-64 h-64 mx-auto mb-8">
-                            <div class="absolute inset-0 border-2 border-dusty-rose rounded-full -rotate-12"></div>
-                            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Ai" alt="Ai" class="relative z-10 w-full h-full rounded-full bg-rose-50 border-4 border-white shadow-xl">
-                        </div>
-                        <h4 class="font-serif text-4xl mb-2 text-slate-800">Ai Siti Rahmawati</h4>
-                        <p class="text-dusty-rose font-semibold mb-2">Putri Kedua</p>
-                        <p class="text-slate-500 text-sm">Putri dari Bpk. Fulan & Ibu Fulanah</p>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Event Section -->
-        <section id="event" class="py-32 section-bg px-6">
-            <div class="section-overlay" style="background: rgba(255,255,255,0.4)"></div>
-            <div class="max-w-5xl mx-auto relative z-10">
-                <div class="text-center mb-16 animate-on-scroll">
-                    <h3 class="font-serif text-4xl text-slate-800 mb-4 tracking-wide">Agenda Acara</h3>
-                    <p class="text-slate-600 text-sm italic">Insya Allah akan dilaksanakan pada:</p>
-                </div>
-                
-                <div class="grid md:grid-cols-2 gap-10">
-                    <div class="glass-card p-10 rounded-[40px] text-center shadow-xl animate-on-scroll">
-                        <i data-lucide="heart" class="text-dusty-rose mx-auto mb-6 w-10 h-10"></i>
-                        <h4 class="font-serif text-3xl mb-4 text-slate-800">Akad Nikah</h4>
-                        <div class="h-px w-12 bg-dusty-rose/30 mx-auto mb-6"></div>
-                        <div class="space-y-4 text-slate-600">
-                            <p class="font-semibold">Minggu, 07 Juni 2026</p>
-                            <p>08:00 WIB - Selesai</p>
-                            <p class="text-sm font-light italic">Kampung Citundun, Setiawargi, Kec. Tamansari</p>
-                        </div>
-                    </div>
-                    
-                    <div class="glass-card p-10 rounded-[40px] text-center shadow-xl animate-on-scroll">
-                        <i data-lucide="users" class="text-dusty-rose mx-auto mb-6 w-10 h-10"></i>
-                        <h4 class="font-serif text-3xl mb-4 text-slate-800">Resepsi</h4>
-                        <div class="h-px w-12 bg-dusty-rose/30 mx-auto mb-6"></div>
-                        <div class="space-y-4 text-slate-600">
-                            <p class="font-semibold">Minggu, 07 Juni 2026</p>
-                            <p>10:00 WIB - Selesai</p>
-                            <p class="text-sm font-light italic text-center">Kediaman Mempelai Wanita</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Maps Section -->
-        <section id="maps" class="py-32 section-bg px-6">
-            <div class="section-overlay" style="background: rgba(255,255,255,0.6)"></div>
-            <div class="max-w-5xl mx-auto text-center relative z-10">
-                <div class="animate-on-scroll mb-12">
-                    <h3 class="font-serif text-4xl mb-6 text-slate-800">Lokasi Acara</h3>
-                    <p class="text-slate-500 mb-8 max-w-lg mx-auto text-sm leading-relaxed">
-                        Kampung citundun, RT.003/RW.008, Setiawargi, Kec. Tamansari, Kab. Tasikmalaya, Jawa Barat
-                    </p>
-                </div>
-                
-                <div class="rounded-[40px] overflow-hidden shadow-2xl h-96 border-8 border-white/50 animate-on-scroll">
-                    <iframe 
-                        src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d15827.279860431326!2d108.2198!3d-7.37!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x2e615437895f5195%3A0x633516599b8f2d50!2sSetiawargi%2C%20Tamansari%2C%20Tasikmalaya%2C%20West%20Java!5e0!3m2!1sen!2sid!4v1700000000000!5m2!1sen!2sid" 
-                        class="w-full h-full grayscale hover:grayscale-0 transition-all duration-700" 
-                        allowfullscreen="" 
-                        loading="lazy">
-                    </iframe>
-                </div>
-                
-                <a href="https://maps.app.goo.gl/YourActualLink" target="_blank" class="animate-on-scroll inline-flex items-center gap-3 mt-10 px-12 py-4 bg-dusty-rose text-white rounded-full hover:bg-dark-rose shadow-xl transition-all">
-                    <i data-lucide="navigation" class="w-5 h-5"></i> Buka Google Maps
-                </a>
-            </div>
-        </section>
-
-        <!-- RSVP Section -->
-        <section id="rsvp" class="py-32 section-bg px-6 pb-48">
-            <div class="section-overlay" style="background: rgba(255,255,255,0.4)"></div>
-            <div class="max-w-4xl mx-auto relative z-10">
-                <div class="text-center mb-16 animate-on-scroll">
-                    <h3 class="font-serif text-4xl mb-6 text-slate-800">Kehadiran</h3>
-                </div>
-
-                <div class="grid lg:grid-cols-2 gap-12">
-                    <div class="glass-card p-8 rounded-3xl animate-on-scroll">
-                        <form id="rsvpForm" class="space-y-6">
-                            <div>
-                                <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Nama Lengkap</label>
-                                <input type="text" id="nameInput" required class="w-full px-5 py-4 rounded-2xl bg-white/50 border border-transparent focus:border-dusty-rose outline-none">
-                            </div>
-                            <div>
-                                <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Konfirmasi</label>
-                                <select id="statusInput" class="w-full px-5 py-4 rounded-2xl bg-white/50 border border-transparent focus:border-dusty-rose outline-none">
-                                    <option value="Hadir">Hadir</option>
-                                    <option value="Tidak Hadir">Tidak Hadir</option>
-                                </select>
-                            </div>
-                            <button type="submit" class="w-full py-4 bg-dusty-rose text-white rounded-2xl font-bold shadow-lg">Kirim</button>
-                        </form>
-                    </div>
-
-                    <div class="animate-on-scroll">
-                        <div id="wishList" class="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scroll">
-                            <div class="text-center py-10 text-slate-400 italic">Belum ada ucapan.</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Footer -->
-        <footer class="py-20 bg-slate-900 text-center text-white relative">
-            <div class="px-6 relative z-10">
-                <h2 class="font-signature text-5xl mb-6 text-dusty-rose">Asep & Ai</h2>
-                <p class="text-slate-400 text-sm max-w-xs mx-auto italic">Terima kasih atas doa dan restu Anda.</p>
-                <div class="mt-12 text-[9px] text-slate-600 tracking-[0.5em]">ASEP & AI &copy; 2026</div>
-            </div>
-        </footer>
-
-        <!-- Navigation Bar -->
-        <nav class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[80] w-[90%] max-w-md bg-white/80 backdrop-blur-xl rounded-[30px] shadow-2xl border border-white/50 px-8 py-4">
-            <div class="flex justify-between items-center">
-                <a href="#home" class="nav-link flex flex-col items-center">
-                    <i data-lucide="home" class="w-5 h-5"></i>
-                    <span class="text-[8px] uppercase mt-1">Home</span>
-                </a>
-                <a href="#couple" class="nav-link flex flex-col items-center">
-                    <i data-lucide="heart" class="w-5 h-5"></i>
-                    <span class="text-[8px] uppercase mt-1">Couple</span>
-                </a>
-                <a href="#event" class="nav-link flex flex-col items-center">
-                    <i data-lucide="calendar" class="w-5 h-5"></i>
-                    <span class="text-[8px] uppercase mt-1">Event</span>
-                </a>
-                <a href="#rsvp" class="nav-link flex flex-col items-center">
-                    <i data-lucide="message-square" class="w-5 h-5"></i>
-                    <span class="text-[8px] uppercase mt-1">RSVP</span>
-                </a>
-            </div>
-        </nav>
+export default function LoadingScreen() {
+  return (
+    <div className="fixed inset-0 flex items-center justify-center bg-black z-50">
+      <motion.div
+        initial={{ scale: 0.9, opacity: 0.6 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ repeat: Infinity, repeatType: "reverse", duration: 1.6 }}
+        className="text-center"
+      >
+        <div className="text-gold text-2xl font-serifTitle">Memuat Dunia Cinta…</div>
+        <div className="mt-4 w-64 h-2 bg-gray-800 rounded overflow-hidden">
+          <motion.div className="h-full bg-gold" animate={{ width: ["0%", "100%"] }} transition={{ duration: 2, repeat: Infinity }} />
+        </div>
+      </motion.div>
     </div>
+  );
+}
+"use client";
+import { useEffect, useRef } from "react";
+import { useStore } from "../store/useStore";
+import { Howl } from "howler";
 
-    <script>
-        lucide.createIcons();
-        const audio = document.getElementById('bgMusic');
-        let playPromise = null;
+export default function MusicControl() {
+  const musicOn = useStore((s) => s.musicOn);
+  const setMusicOn = useStore((s) => s.setMusicOn);
+  const data = useStore((s) => s.data);
+  const soundRef = useRef<Howl | null>(null);
 
-        async function playAudio() {
-            if (audio.paused) {
-                try {
-                    playPromise = audio.play();
-                    await playPromise;
-                    updateMusicIcon(true);
-                } catch (e) { console.log("Audio play blocked"); }
-            }
-        }
+  useEffect(() => {
+    if (!data.music) return;
+    soundRef.current = new Howl({
+      src: [data.music],
+      loop: true,
+      volume: 0.45,
+      html5: true
+    });
+    if (musicOn) soundRef.current.play();
+    return () => soundRef.current?.unload();
+  }, []);
 
-        async function pauseAudio() {
-            if (playPromise !== null) await playPromise;
-            audio.pause();
-            updateMusicIcon(false);
-        }
+  useEffect(() => {
+    if (!soundRef.current) return;
+    if (musicOn) soundRef.current.play();
+    else soundRef.current.pause();
+  }, [musicOn]);
 
-        function updateMusicIcon(isPlaying) {
-            const icon = document.getElementById('musicIcon');
-            icon.setAttribute('data-lucide', isPlaying ? 'music' : 'music-2');
-            lucide.createIcons();
-        }
+  return (
+    <div className="fixed bottom-6 right-6 z-40">
+      <button
+        onClick={() => setMusicOn(!musicOn)}
+        className="bg-black/60 border border-gold text-gold px-4 py-2 rounded-lg backdrop-blur-sm"
+        aria-label="Toggle music"
+      >
+        {musicOn ? "Musik: On" : "Musik: Off"}
+      </button>
+    </div>
+  );
+}
+"use client";
+import { useState } from "react";
+import RSVPForm from "./RSVPForm";
+import WhatsAppShare from "./WhatsAppShare";
+import { useStore } from "../store/useStore";
+import Countdown3D from "./Countdown3D";
 
-        function toggleAudio() {
-            if (audio.paused) playAudio();
-            else pauseAudio();
-        }
+export default function HUD() {
+  const data = useStore((s) => s.data);
+  const [open, setOpen] = useState(false);
 
-        function openInvitation() {
-            document.body.classList.remove('cover-active');
-            document.getElementById('cover').classList.add('animate__animated', 'animate__fadeOutUp');
-            setTimeout(() => {
-                document.getElementById('cover').style.display = 'none';
-                document.getElementById('main-content').style.display = 'block';
-                document.getElementById('audioControl').classList.remove('hidden');
-                playAudio();
-                initScrollObserver();
-                setInterval(createPetal, 500);
-            }, 1000);
-        }
+  return (
+    <>
+      <div className="fixed top-6 left-6 z-40 flex items-center gap-3">
+        <div className="text-ivory">
+          <div className="text-sm">Undangan</div>
+          <div className="text-lg font-serifTitle text-gold">{data.groom} &amp; {data.bride}</div>
+        </div>
+      </div>
 
-        function createPetal() {
-            const petal = document.createElement('div');
-            petal.classList.add('petal');
-            const size = Math.random() * 10 + 10;
-            petal.style.width = size + 'px';
-            petal.style.height = size + 'px';
-            petal.style.left = Math.random() * 100 + 'vw';
-            const dur = Math.random() * 6 + 4;
-            petal.style.animation = `fall ${dur}s linear forwards`;
-            petal.style.backgroundColor = ['#E2E8F0', '#D4A5A5', '#FCE7F3'][Math.floor(Math.random()*3)];
-            document.body.appendChild(petal);
-            setTimeout(() => petal.remove(), dur * 1000);
-        }
+      <div className="fixed bottom-6 left-6 z-40 flex gap-3">
+        <button onClick={() => setOpen(true)} className="bg-gold text-black px-4 py-2 rounded-lg">RSVP</button>
+        <WhatsAppShare />
+      </div>
 
-        function initScrollObserver() {
-            const obs = new IntersectionObserver((entries) => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) entry.target.classList.add('visible');
-                });
-            }, { threshold: 0.1 });
-            document.querySelectorAll('.animate-on-scroll').forEach(el => obs.observe(el));
-        }
+      <div className="fixed top-6 right-6 z-40">
+        <Countdown3D />
+      </div>
 
-        document.getElementById('rsvpForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            const name = document.getElementById('nameInput').value;
-            const status = document.getElementById('statusInput').value;
-            const list = document.getElementById('wishList');
-            if(list.innerText.includes("Belum ada ucapan")) list.innerHTML = "";
-            const card = document.createElement('div');
-            card.className = 'glass-card p-5 rounded-2xl border-l-4 border-dusty-rose mb-3';
-            card.innerHTML = `<h5 class="font-bold text-slate-800 text-sm">${name}</h5><p class="text-xs text-dusty-rose font-bold uppercase mt-1">${status}</p>`;
-            list.prepend(card);
-            this.reset();
-        });
+      <RSVPForm open={open} onClose={() => setOpen(false)} />
+    </>
+  );
+}
+"use client";
+import { useState } from "react";
+import { useStore } from "../store/useStore";
+import { v4 as uuidv4 } from "uuid";
+import { motion } from "framer-motion";
 
-        window.addEventListener('scroll', () => {
-            let curr = "";
-            document.querySelectorAll('section').forEach(s => {
-                if(pageYOffset >= s.offsetTop - 300) curr = s.id;
-            });
-            document.querySelectorAll('.nav-link').forEach(l => {
-                l.classList.toggle('active', l.href.includes(curr));
-            });
-        });
-    </script>
-</body>
-</html>
+export default function RSVPForm({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const addRSVP = useStore((s) => s.addRSVP);
+  const [name, setName] = useState("");
+  const [attendance, setAttendance] = useState("Hadir");
+  const [message, setMessage] = useState("");
+
+  if (!open) return null;
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const id = uuidv4();
+    addRSVP({ name, attendance, message, id });
+    setName(""); setMessage("");
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+      <motion.form initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} onSubmit={submit} className="bg-black/80 border border-gold p-6 rounded-lg w-11/12 max-w-md">
+        <h3 className="text-xl font-serifTitle text-gold">Konfirmasi Kehadiran</h3>
+        <label className="block mt-4 text-sm">Nama</label>
+        <input value={name} onChange={(e)=>setName(e.target.value)} className="w-full mt-1 p-2 rounded bg-gray-900 border border-gray-700" required />
+        <label className="block mt-3 text-sm">Kehadiran</label>
+        <select value={attendance} onChange={(e)=>setAttendance(e.target.value)} className="w-full mt-1 p-2 rounded bg-gray-900 border border-gray-700">
+          <option>Hadir</option>
+          <option>Tidak Hadir</option>
+          <option>Belum Tahu</option>
+        </select>
+        <label className="block mt-3 text-sm">Pesan</label>
+        <textarea value={message} onChange={(e)=>setMessage(e.target.value)} className="w-full mt-1 p-2 rounded bg-gray-900 border border-gray-700" rows={3} />
+        <div className="mt-4 flex justify-end gap-2">
+          <button type="button" onClick={onClose} className="px-4 py-2 border border-gray-700 rounded">Batal</button>
+          <button type="submit" className="px-4 py-2 bg-gold text-black rounded">Kirim</button>
+        </div>
+      </motion.form>
+    </div>
+  );
+}
+"use client";
+import { useStore } from "../store/useStore";
+
+export default function WhatsAppShare() {
+  const data = useStore((s) => s.data);
+  const share = () => {
+    const text = `Undangan pernikahan ${data.groom} & ${data.bride}\nTanggal: ${new Date(data.date).toLocaleDateString()}\nLokasi: ${data.venue}\n\nBuka undangan interaktif kami.`;
+    const url = typeof window !== "undefined" ? window.location.href : "";
+    const wa = `https://wa.me/?text=${encodeURIComponent(text + "\n" + url)}`;
+    window.open(wa, "_blank");
+  };
+
+  return (
+    <button onClick={share} className="bg-black/60 border border-gold text-gold px-4 py-2 rounded-lg">Share</button>
+  );
+}
+"use client";
+import { useRef, useState } from "react";
+import { useFrame } from "@react-three/fiber";
+import { Text } from "@react-three/drei";
+import { useStore } from "../store/useStore";
+
+export default function OpeningPortal() {
+  const pointsRef = useRef<any>();
+  const data = useStore((s) => s.data);
+  const [entered, setEntered] = useState(false);
+
+  const count = 600;
+  const positions = new Float32Array(count * 3);
+  for (let i = 0; i < count; i++) {
+    const r = Math.random() * 6;
+    positions[i * 3 + 0] = (Math.random() - 0.5) * r;
+    positions[i * 3 + 1] = (Math.random() - 0.5) * r;
+    positions[i * 3 + 2] = (Math.random() - 0.5) * r;
+  }
+
+  useFrame((state, delta) => {
+    if (pointsRef.current) pointsRef.current.rotation.y += delta * 0.02;
+  });
+
+  return (
+    <group position={[0, 0, -6]}>
+      <points ref={pointsRef}>
+        <bufferGeometry>
+          <bufferAttribute attach="attributes-position" array={positions} itemSize={3} count={count} />
+        </bufferGeometry>
+        <pointsMaterial size={0.03} color="#C9A34A" sizeAttenuation />
+      </points>
+
+      <Text
+        position={[0, 0.6, 0]}
+        fontSize={0.45}
+        color="#F8F4EE"
+        font="/fonts/PlayfairDisplay-Regular.ttf"
+        anchorX="center"
+        anchorY="middle"
+      >
+        {data.story.meeting ? "Setiap kisah punya awal…" : ""}
+      </Text>
+
+      <mesh position={[0, -0.8, 0]} onClick={() => setEntered(true)}>
+        <planeGeometry args={[2.6, 0.6]} />
+        <meshStandardMaterial color="#000000" opacity={0.6} transparent />
+        <Text position={[0, 0, 0.01]} fontSize={0.14} color="#C9A34A" anchorX="center" anchorY="middle">
+          Masuk ke Dunia Kami
+        </Text>
+      </mesh>
+    </group>
+  );
+}
+"use client";
+import { useRef } from "react";
+import { useFrame } from "@react-three/fiber";
+import { useStore } from "../store/useStore";
+import { Text } from "@react-three/drei";
+
+export default function JourneyScene() {
+  const group = useRef<any>();
+  const data = useStore((s) => s.data);
+
+  useFrame((state, delta) => {
+    if (group.current) group.current.rotation.y += delta * 0.01;
+  });
+
+  return (
+    <group ref={group} position={[0, -0.6, -12]}>
+      <mesh position={[-2, -0.2, -2]} rotation={[0, 0.2, 0]}>
+        <coneGeometry args={[2.6, 3.6, 5]} />
+        <meshStandardMaterial color="#2b2b2b" />
+      </mesh>
+
+      <mesh position={[2, -0.2, -1]}>
+        <coneGeometry args={[1.8, 2.8, 5]} />
+        <meshStandardMaterial color="#3b3b3b" />
+      </mesh>
+
+      <ambientLight intensity={0.25} />
+      <directionalLight color="#ffd9a6" intensity={0.9} position={[5, 6, 2]} />
+
+      {Array.from({ length: 18 }).map((_, i) => (
+        <mesh key={i} position={[Math.random() * 6 - 3, -0.8, Math.random() * 4 - 2]}>
+          <planeGeometry args={[0.08, 0.8]} />
+          <meshStandardMaterial color="#6b8a4a" side={2} />
+        </mesh>
+      ))}
+
+      <Text position={[0, 1.6, 0]} fontSize={0.18} color="#F8F4EE" anchorX="center" anchorY="middle">
+        {data.story.journey}
+      </Text>
+    </group>
+  );
+}
